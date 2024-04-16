@@ -1,19 +1,19 @@
 #chave=valor
 
 #[Linux]
-#revista ansible_host=10.10.0.180
-#debian01 ansible_host=10.10.0.182
-#rocky01 ansible_host=10.10.0.183
+#revista ansible_host=colocar IP aqui
+#debian01 ansible_host=colocar IP aqui
+#rocky01 ansible_host=colocar IP aqui
 
 
 [debian]
-debian01 ansible_host=10.10.0.182 zz=inventory_file
+debian01 ansible_host=colocar IP aqui zz=inventory_file
 
 [redhat]
-rocky01 ansible_host=10.10.0.183
+rocky01 ansible_host=colocar IP aqui
 
 [windows]
-windows01 ansible_host=192.168.1.102
+windows01 ansible_host=colocar IP aqui
 
 [linux:children]
 redhat
