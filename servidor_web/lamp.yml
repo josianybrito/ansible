@@ -1,0 +1,47 @@
+---
+- name: Instalar a pilha LAMP com medicao de tempo e desempenho
+  hosts: hajaes
+  become: yes
+  vars:
+    metricas_dir: "/root/lamp_aut"
+    timestamp: "{{ lookup('pipe', 'date +%Y-%m-%d_%H-%M-%S') }}"
+    perf_file: "{{ metricas_dir }}/metricas_{{ timestamp }}.perf"
+    time_file: "{{ metricas_dir }}/metricas_{{ timestamp }}.txt"
+
+  pre_tasks:
+    - name: Criar diretorio para salvar metricas
+      ansible.builtin.file:
+        path: "{{ metricas_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Marcar horario local de inicio
+      ansible.builtin.shell: date '+%Y-%m-%d %H:%M:%S'
+      register: inicio_local
+
+    - name: Exibir horario local de inicio
+      ansible.builtin.debug:
+        msg: "Inicio da instalacao (horario local): {{ inicio_local.stdout }}"
+
+  tasks:
+    - name: Instalar pacotes LAMP com perf e time
+      ansible.builtin.shell: >
+        echo "# started on $(date -d '{{ inicio_local.stdout }}' '+%a %b %d %H:%M:%S %Y')" > {{ perf_file }} && \
+        /usr/bin/time -v -o {{ time_file }} \
+        perf stat -a -r 1 -o - \
+        apt install -y apache2 mariadb-server mariadb-client \
+        php8.1 php8.1-cli php8.1-common php8.1-mysql \
+        php8.1-xml php8.1-mbstring php8.1-curl php8.1-zip \
+        php8.1-soap php8.1-intl php8.1-gd libapache2-mod-php8.1 \
+        >> {{ perf_file }} 2>&1
+      args:
+        executable: /bin/bash
+
+  post_tasks:
+    - name: Marcar horario local de fim
+      ansible.builtin.shell: date '+%Y-%m-%d %H:%M:%S'
+      register: fim_local
+
+    - name: Exibir horario local de fim
+      ansible.builtin.debug:
+        msg: "Fim da instalacao (horario local): {{ fim_local.stdout }}"
