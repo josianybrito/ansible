@@ -69,7 +69,7 @@
     restore_log: /home/ansible/restauracao_banco.log
     restore_time: /home/ansible/restauracao_time.log
     restore_perf: /home/ansible/restauracao_perf.log
-    remote_path: /home/ansible/dump_portalseer.sql
+    remote_path: /home/ansible/dump_db.sql
   tasks:
     - name: Carregar informacoes do host hajaes
       set_fact:
