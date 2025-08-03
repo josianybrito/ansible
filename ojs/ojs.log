@@ -1,0 +1,64 @@
+
+PLAY [Atualizacao Completa do OJS (v3.4.0-2 - Metodo Automatizado)] ************
+
+TASK [Coletar tempo (epoch) do controller] *************************************
+ok: [hajaes -> localhost]
+
+TASK [Definir registro tempo de início] *****************************************
+ok: [hajaes -> localhost]
+
+TASK [Exibir Horario de Inicio] ************************************************
+ok: [hajaes -> localhost] => {
+    "msg": "Início do Playbook: 2025-06-20 22:42:05"
+}
+
+TASK [FASE I: Backup dos Dados Persistentes] ***********************************
+changed: [ajaes -> localhost]
+
+TASK [FASE II: Preparacao do Ambiente de Destino] ******************************
+[WARNING]: Platform linux on host hajaes is using the discovered Python
+interpreter at /usr/bin/python3.11, but future installation of another Python
+interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.17/reference_appendices/interpreter_discovery.html for more information.
+changed: [hajaes]
+
+TASK [FASE III: Transferencia do Backup] ***************************************
+changed: [hajaes -> localhost]
+
+TASK [FASE IV: Restauracao dos Arquivos] ***************************************
+changed: [hajaes]
+
+TASK [Garantir a configuracao de e-mail correta] *******************************
+changed: [hajaes]
+
+TASK [Ajustar permissoes e limpar cache] ***************************************
+changed: [hajaes]
+
+TASK [Executar o script de upgrade do OJS] *************************************
+changed: [hajaes]
+
+TASK [Remover arquivos temporarios do host de destino] *************************
+changed: [hajaes] => (item=/var/tmp/restore_manual)
+changed: [hajaes] => (item=/var/tmp/ojs-3.4.0-2.tar.gz)
+changed: [hajaes] => (item=/var/tmp/persistentes_3.4.tgz)
+
+TASK [Remover arquivos temporarios do no de controle] **************************
+changed: [hajaes -> localhost]
+
+TASK [Registrar tempo de fim] **************************************************
+ok: [hajaes -> localhost]
+
+TASK [Calcular duração total] **************************************************
+ok: [hajaes -> localhost]
+
+TASK [Exibir tempo final] ******************************************************
+ok: [hajaes -> localhost] => {
+    "msg": [
+        "Fim da execução: 2025-06-20 22:55:21",
+        "Duração total: 796 segundos."
+    ]
+}
+
+PLAY RECAP *********************************************************************
+hajaes      : ok=15   changed=9    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
