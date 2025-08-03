@@ -1,0 +1,63 @@
+PLAY [Garantir que o usuario do banco exista em hajaes] **********************
+
+TASK [Gathering Facts] *******************************************************
+[WARNING]: Platform linux on host hajaes is using the discovered Python interpreter at /usr/bin/python3.11, but future installation
+of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.17/reference_appendices/interpreter_discovery.html for more information.
+ok: [hajaes]
+
+TASK [Verificar se o usuario do banco ja existe] ******************************
+ok: [hajaes]
+
+TASK [Definir variavel booleana com base no resultado da consulta] ************
+ok: [hajaes]
+
+TASK [Criar usuario do banco se nao existir] **********************************
+skipping: [hajaes]
+
+PLAY [Dump e transferancia com medicao] ***************************************
+
+TASK [Carregar informacoes do host ajaes] *************************************
+ok: [localhost]
+
+TASK [Carregar informacoes do host hajaes] ************************************
+ok: [localhost]
+
+TASK [Registrar horario de inicio da copia] ***********************************
+changed: [localhost]
+
+TASK [Executar dump e transferencia com perf e time] **************************
+changed: [localhost]
+
+TASK [Registrar horario de fim da copia] **************************************
+changed: [localhost]
+
+PLAY [Restaurar dump no hajaes com medicao] ***********************************
+
+TASK [Carregar informacoes do host hajaes] ************************************
+ok: [localhost]
+
+TASK [Registrar horario de inicio da restauracao] *****************************
+changed: [localhost]
+
+TASK [Executar restauracao com perf e time via SSH] ***************************
+changed: [localhost]
+
+TASK [Registrar horario de fim da restauracao] ********************************
+changed: [localhost]
+
+PLAY [Remover dump da maquina origem (ajaes)] *********************************
+
+TASK [Gathering Facts] ********************************************************
+[WARNING]: Platform linux on host ajaes is using the discovered Python interpreter at /usr/bin/python3.10, but future installation of
+another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.17/reference_appendices/interpreter_discovery.html for more information.
+ok: [ajaes]
+
+TASK [Apagar dump em ajaes] ****************************************************
+changed: [ajaes]
+
+PLAY RECAP *********************************************************************
+ajaes                      : ok=2    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+hajaes                     : ok=3    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+localhost                  : ok=9    changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
