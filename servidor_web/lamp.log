@@ -1,0 +1,35 @@
+PLAY [Instalar a pilha LAMP com medicao de tempo e desempenho] ***************
+
+TASK [Gathering Facts] ********************************************************
+[WARNING]: Platform linux on host hajaes is using the discovered Python 
+interpreter at /usr/bin/python3.11, but future installation of another Python 
+interpreter could change the meaning of that path. See 
+https://docs.ansible.com/ansible-core/2.17/reference_appendices/
+interpreter_discovery.html for more information.
+ok: [hajaes]
+
+TASK [Criar diretorio para salvar metricas] ***********************************
+ok: [hajaes]
+
+TASK [Marcar horario local de inicio] *****************************************
+changed: [hajaes]
+
+TASK [Exibir horario local de inicio] *****************************************
+ok: [hajaes] => {
+    "msg": "Inicio da instalacao (horario local): 2025-06-10 08:47:56"
+}
+
+TASK [Instalar pacotes LAMP com perf e time] **********************************
+changed: [hajaes]
+
+TASK [Marcar horario local de fim] ********************************************
+changed: [hajaes]
+
+TASK [Exibir horario local de fim] ********************************************
+ok: [hajaes] => {
+    "msg": "Fim da instalacao (horario local): 2025-06-10 08:48:40"
+}
+
+PLAY RECAP ********************************************************************
+hajaes                     : ok=7    changed=3    unreachable=0    failed=0    
+                             skipped=0    rescued=0    ignored=0
