@@ -1,0 +1,130 @@
+---
+- name: "Atualização Completa do OJS (v3.4.0-2)"
+  hosts: hajaes 
+  become: true
+  gather_facts: false
+
+  vars:
+    # --- Configurações ---
+    versao_ojs: "3.4.0-2"
+    destino_ojs: "/var/www/html"
+    diretorio_arquivos_ojs: "/usr/local/ojs-files"
+    usuario_web: "www-data"
+
+    # --- Host de Origem ---
+    host_origem: "ajaes"
+    usuario_ssh_origem: "root"
+    porta_ssh_origem: 2738
+
+    # --- Nomes Fixos e Previsíveis ---
+    dir_temp_remoto: "/var/tmp"
+    dir_temp_local: "/tmp"
+    nome_arquivo_backup: "persistentes_v3.4.tgz"
+    caminho_backup_local: "{{ dir_temp_local }}/{{ nome_arquivo_backup }}"
+    dir_restore_remoto: "{{ dir_temp_remoto }}/restore_manual"
+
+  pre_tasks:
+    - name: "Registrar tempo de início"
+      run_once: true
+      delegate_to: localhost
+      block:
+        - name: "Coletar tempo (epoch) do controller"
+          command: date +%s
+          register: start_epoch_cmd
+          changed_when: false
+        - name: "Definir tempo de início"
+          set_fact:
+            start_epoch: "{{ start_epoch_cmd.stdout }}"
+    - name: "Exibir Horário de Início"
+      run_once: true
+      delegate_to: localhost
+      debug:
+        msg: "Início do Playbook: {{ lookup('pipe', 'date \"+%Y-%m-%d %H:%M:%S\"') }}"
+
+  tasks:
+    - name: "FASE I: Backup dos Dados Persistentes"
+      delegate_to: localhost
+      run_once: true
+      shell: |
+        set -o pipefail
+        sudo ssh -p {{ porta_ssh_origem }} {{ usuario_ssh_origem }}@{{ host_origem }} \
+        "export TMPDIR={{ dir_temp_remoto }} && sudo tar czf - -C /var/www/html public -C /usr/local --exclude='ojs-files/usageStats' ojs-files -C /var/www/html config.inc.php" \
+        > {{ caminho_backup_local }}
+      args:
+        executable: /bin/bash
+
+    - name: "FASE II: Preparação do Ambiente de Destino"
+      shell: |
+        cd {{ dir_temp_remoto }}
+        wget -q https://pkp.sfu.ca/ojs/download/ojs-{{ versao_ojs }}.tar.gz
+        sudo rm -rf {{ destino_ojs }}
+        sudo tar -xzf ojs-{{ versao_ojs }}.tar.gz -C /var/www
+        sudo mv /var/www/ojs-{{ versao_ojs }} {{ destino_ojs }}
+      args:
+        executable: /bin/bash
+
+    - name: "FASE III: Transferência do Backup"
+      delegate_to: localhost
+      run_once: true
+      command: >
+        sudo scp {{ caminho_backup_local }} ansible@{{ inventory_hostname }}:{{ dir_temp_remoto }}/
+
+    - name: "FASE IV: Restauração dos Arquivos"
+      shell: |
+        sudo rm -rf {{ dir_restore_remoto }} && sudo mkdir {{ dir_restore_remoto }}
+        sudo tar xzf {{ dir_temp_remoto }}/{{ nome_arquivo_backup }} -C {{ dir_restore_remoto }}/
+        sudo rsync -a --delete {{ dir_restore_remoto }}/public/ {{ destino_ojs }}/public/
+        sudo rsync -a --delete {{ dir_restore_remoto }}/ojs-files/ {{ diretorio_arquivos_ojs }}/
+        sudo cp {{ dir_restore_remoto }}/config.inc.php {{ destino_ojs }}/config.inc.php
+      args:
+        executable: /bin/bash
+
+    - name: "Garantir a configuração de e-mail correta"
+      blockinfile:
+        path: "{{ destino_ojs }}/config.inc.php"
+        marker: "; {mark} ANSIBLE MANAGED EMAIL CONFIG"
+        insertafter: '\[email\]'
+        block: |
+          default = sendmail
+          sendmail_path = "/usr/sbin/sendmail -bs"
+
+    - name: "FASE V: Finalizar a Atualização"
+      block:
+        - name: "Ajustar permissões e limpar cache"
+          shell: |
+            sudo chown -R {{ usuario_web }}:{{ usuario_web }} {{ destino_ojs }}
+            sudo chown -R {{ usuario_web }}:{{ usuario_web }} {{ diretorio_arquivos_ojs }}
+            sudo rm -rf {{ destino_ojs }}/cache/*.php {{ destino_ojs }}/cache/t_compile/*.tpl.php
+          args:
+            executable: /bin/bash
+        - name: "Executar o script de upgrade do OJS"
+          command: "sudo -u {{ usuario_web }} php {{ destino_ojs }}/tools/upgrade.php upgrade"
+
+  post_tasks:
+    - name: "Limpeza Final"
+      block:
+        - name: "Remover arquivos temporários do host de destino"
+          file: { path: "{{ item }}", state: absent }
+          loop:
+            - "{{ dir_restore_remoto }}"
+            - "{{ dir_temp_remoto }}/ojs-{{ versao_ojs }}.tar.gz"
+            - "{{ dir_temp_remoto }}/{{ nome_arquivo_backup }}"
+        - name: "Remover arquivos temporários do nó de controle"
+          delegate_to: localhost
+          run_once: true
+          file: { path: "{{ caminho_backup_local }}", state: absent }
+
+    - name: "Finalizar e registrar tempo total"
+      run_once: true
+      delegate_to: localhost
+      block:
+        - name: "Registrar tempo de fim"
+          command: date +%s
+          register: end_epoch_cmd
+          changed_when: false
+        - name: "Calcular duração total"
+          set_fact:
+            total_duration: "{{ end_epoch_cmd.stdout | int - start_epoch | int }}"
+        - name: "Exibir tempo final"
+          debug:
+            msg: ["Fim da execucao: {{ lookup('pipe', 'date \"+%Y-%m-%d %H:%M:%S\"') }}", "Duracao total: {{ total_duration }} segundos."]
