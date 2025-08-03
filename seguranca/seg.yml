@@ -1,0 +1,103 @@
+---
+- name: Configurar seguranca com medicao automatizada (iptables + fail2ban)
+  hosts: hajaes
+  become: true
+  gather_facts: true
+
+  vars:
+    metricas_dir: "/root/seg-aut"
+    timestamp: "{{ lookup('pipe', 'date +%Y-%m-%d_%H-%M-%S') }}"
+    perf_file: "{{ metricas_dir }}/metricas_{{ timestamp }}.perf"
+    time_file: "{{ metricas_dir }}/metricas_{{ timestamp }}.txt"
+    log_file: "{{ metricas_dir }}/regras_aplicadas_{{ timestamp }}.txt"
+
+  tasks:
+
+    - name: Criar diretorio para salvar as metricas
+      file:
+        path: "{{ metricas_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Marcar horario local de inicio
+      shell: date "+%Y-%m-%d %H:%M:%S"
+      register: hora_inicio
+
+    - name: Exibir horario local de inicio
+      debug:
+        msg: "Inicio da configuracao (horario local): {{ hora_inicio.stdout }}"
+
+    - name: Escrever cabecalho inicial no arquivo .perf
+      copy:
+        dest: "{{ perf_file }}"
+        content: |
+          # started on {{ hora_inicio.stdout }}
+
+          Performance counter stats for firewall setup:
+
+    - name: Executar medicao com perf e time
+      shell: |
+        /usr/bin/time -v -o "{{ time_file }}" \
+        perf stat -a -r 1 -o - bash -c '
+          apt update
+          apt install -y iptables iptables-persistent fail2ban
+
+          iptables -I INPUT 1 -s 192.0.101.2 -j ACCEPT
+          iptables -F
+          iptables -X
+
+          iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+          iptables -A INPUT -p tcp --dport 22 -s 192.0.100.0/24 -j ACCEPT
+          iptables -A INPUT -p tcp --dport 22 -s 192.0.101.0/24 -j ACCEPT
+          iptables -A INPUT -p tcp --dport 22 -s 192.0.0.281 -j ACCEPT
+          iptables -A INPUT -p tcp --dport 22 -j DROP
+          iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+          iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+          iptables -A INPUT -p icmp --icmp-type echo-request -s 192.0.100.0/24 -j ACCEPT
+          iptables -A INPUT -p icmp --icmp-type echo-request -s 192.0.101.0/24 -j ACCEPT
+          iptables -A INPUT -p tcp --syn -j LOG --log-prefix "IPTABLES TCP SCAN: "
+          iptables -A INPUT -p udp -j LOG --log-prefix "IPTABLES UDP SCAN: "
+          iptables -A INPUT -p icmp -j LOG --log-prefix "IPTABLES ICMP SCAN: "
+          iptables -A INPUT -p tcp --dport 3306 -s 192.0.100.0/24 -j ACCEPT
+          iptables -A INPUT -p tcp --dport 3306 -s 192.0.101.0/24 -j ACCEPT
+          iptables -A INPUT -p tcp --dport 3306 -j DROP
+          iptables -P INPUT DROP
+          iptables -P FORWARD DROP
+          iptables -P OUTPUT ACCEPT
+
+          iptables-save > /etc/iptables/rules.v4
+          systemctl restart netfilter-persistent
+
+          echo "[sshd]" > /etc/fail2ban/jail.local
+          echo "enabled = true" >> /etc/fail2ban/jail.local
+          echo "port = ssh" >> /etc/fail2ban/jail.local
+          echo "filter = sshd" >> /etc/fail2ban/jail.local
+          echo "logpath = /var/log/auth.log" >> /etc/fail2ban/jail.local
+          echo "maxretry = 3" >> /etc/fail2ban/jail.local
+
+          echo "[apache]" >> /etc/fail2ban/jail.local
+          echo "enabled = true" >> /etc/fail2ban/jail.local
+          echo "port = http,https" >> /etc/fail2ban/jail.local
+          echo "filter = apache-auth" >> /etc/fail2ban/jail.local
+          echo "logpath = /var/log/apache2/error.log" >> /etc/fail2ban/jail.local
+          echo "maxretry = 3" >> /etc/fail2ban/jail.local
+
+          systemctl enable fail2ban
+          systemctl restart fail2ban
+
+          iptables -L -n -v > {{ log_file }}
+        ' >> "{{ perf_file }}" 2>&1
+
+    - name: Marcar horario local de fim
+      shell: date "+%Y-%m-%d %H:%M:%S"
+      register: hora_fim
+
+    - name: Exibir horario local de fim
+      debug:
+        msg: "Fim da configuracao (horario local): {{ hora_fim.stdout }}"
+
+    - name: Adicionar linha de final da execucao ao .perf
+      lineinfile:
+        path: "{{ perf_file }}"
+        line: "# finished on {{ hora_fim.stdout }}"
+        insertafter: EOF
