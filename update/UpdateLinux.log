@@ -1,0 +1,15 @@
+root@debian:/etc/ansible/inventory# ansible-playbook -i hosts
+/etc/ansible/playbooks/1_UpdateLinux.yml
+PLAY [Update Rocky Linux Servers - Starting Deploy] ***************************
+TASK [Gathering Facts] ********************************************************
+ok: [rocky01]
+TASK [DNF | Update System] ****************************************************
+changed: [rocky01]
+PLAY [Update Debian Linux Servers - Starting Deploy] **************************
+TASK [Gathering Facts] ********************************************************
+ok: [debian01]
+TASK [Debian Like | Update System] ********************************************
+changed: [debian01]
+PLAY RECAP ********************************************************************
+debian01 : ok=2 changed=1 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
+rocky01 : ok=2 changed=1 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
